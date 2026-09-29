@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.NoSuchElementException;
 
 public class AuthService {
+    private static final int USERNAME_AND_PASSWORD = 2;
     private final MyDao authDao = new MyDao();
 
     public void createUser(String username, String password) throws IOException {
@@ -33,7 +34,7 @@ public class AuthService {
             return false;
         }
         String[] splitStr = nonBasicStr.split(":", 2);
-        if (splitStr.length != 2) {
+        if (splitStr.length != USERNAME_AND_PASSWORD) {
             return false;
         }
 

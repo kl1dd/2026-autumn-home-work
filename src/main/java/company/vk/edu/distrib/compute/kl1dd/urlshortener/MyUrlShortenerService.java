@@ -12,6 +12,8 @@ import java.security.SecureRandom;
 import java.util.NoSuchElementException;
 
 public class MyUrlShortenerService implements UrlShortenerService {
+    private static final String GET_METHOD = "GET";
+
     private final SecureRandom random = new SecureRandom();
     private final HttpServer httpServer;
     private final MyDao linksDao;
@@ -58,7 +60,7 @@ public class MyUrlShortenerService implements UrlShortenerService {
     }
 
     private void handleStatus(HttpExchange exchange) throws IOException {
-        if (!"GET".equals(exchange.getRequestMethod())) {
+        if (!GET_METHOD.equals(exchange.getRequestMethod())) {
             exchange.sendResponseHeaders(405, -1);
             exchange.close();
             return;
@@ -187,7 +189,7 @@ public class MyUrlShortenerService implements UrlShortenerService {
 
     private void handleRedirect(HttpExchange exchange) throws IOException {
         String method = exchange.getRequestMethod();
-        if (!"GET".equals(method)) {
+        if (!GET_METHOD.equals(method)) {
             exchange.sendResponseHeaders(405, -1);
             exchange.close();
             return;
