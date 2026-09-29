@@ -221,15 +221,18 @@ public class MyUrlShortenerService implements UrlShortenerService {
         }
 
         for (int i = 0; i < 10; i++) {
-            Character current = id.charAt(i);
-            if (!(('A' <= current && current <= 'Z')
-                    || ('a' <= current && current <= 'z')
-                    || Character.isDigit(current))) {
+            if (!isAlphaNumeric(id.charAt(i))) {
                 return false;
             }
         }
 
         return true;
+    }
+
+    private boolean isAlphaNumeric(char current) {
+        return ('A' <= current && current <= 'Z')
+                || ('a' <= current && current <= 'z')
+                || ('0' <= current && current <= '9');
     }
 
     private boolean isValidURL(String url) {
