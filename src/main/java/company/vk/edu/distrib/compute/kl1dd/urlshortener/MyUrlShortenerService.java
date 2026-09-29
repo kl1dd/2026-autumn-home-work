@@ -221,9 +221,10 @@ public class MyUrlShortenerService implements UrlShortenerService {
         }
 
         for (int i = 0; i < 10; i++) {
-            if (!(('A' <= id.charAt(i) && id.charAt(i) <= 'Z')
-                    || ('a' <= id.charAt(i) && id.charAt(i) <= 'z')
-                    || ('0' <= id.charAt(i) && id.charAt(i) <= '9'))) {
+            Character current = id.charAt(i);
+            if (!(('A' <= current && current <= 'Z')
+                    || ('a' <= current && current <= 'z')
+                    || Character.isDigit(current))) {
                 return false;
             }
         }
