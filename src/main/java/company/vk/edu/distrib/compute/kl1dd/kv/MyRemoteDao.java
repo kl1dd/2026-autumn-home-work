@@ -10,6 +10,11 @@ import java.net.http.HttpResponse;
 import java.util.NoSuchElementException;
 
 public class MyRemoteDao implements Dao<String> {
+    private static final int HTTP_OK = 200;
+    private static final int HTTP_CREATED = 201;
+    private static final int HTTP_ACCEPTED = 202;
+    private static final int HTTP_NOT_FOUND = 404;
+
     private final int port;
     private final HttpClient httpClient;
 
@@ -28,11 +33,11 @@ public class MyRemoteDao implements Dao<String> {
             response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
             int statusCode = response.statusCode();
 
-            if (statusCode == 200) {
+            if (statusCode == HTTP_OK) {
                 return response.body();
             }
 
-            if (statusCode == 404) {
+            if (statusCode == HTTP_NOT_FOUND) {
                 throw new NoSuchElementException();
             }
 
@@ -52,7 +57,7 @@ public class MyRemoteDao implements Dao<String> {
         try {
             response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
             int statusCode = response.statusCode();
-            if (statusCode == 201) {
+            if (statusCode == HTTP_CREATED) {
                 return;
             }
 
@@ -72,7 +77,7 @@ public class MyRemoteDao implements Dao<String> {
         try {
             response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
             int statusCode = response.statusCode();
-            if (statusCode == 202) {
+            if (statusCode == HTTP_ACCEPTED) {
                 return;
             }
 
