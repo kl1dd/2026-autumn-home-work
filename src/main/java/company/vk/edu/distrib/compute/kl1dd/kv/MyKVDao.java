@@ -11,7 +11,7 @@ public class MyKVDao implements Dao<byte[]> {
     private final Path storageDir;
 
     public MyKVDao() throws IOException {
-        this.storageDir = Path.of("storage");
+        this.storageDir = Files.createTempDirectory("kv-storage");
         Files.createDirectories(storageDir);
     }
 
