@@ -14,6 +14,13 @@ import java.util.NoSuchElementException;
 
 public class MyUrlShortenerService implements UrlShortenerService {
     private static final String GET_METHOD = "GET";
+    private static final String POST_METHOD = "POST";
+    private static final String LINKS_PATH = "/v0/links";
+    private static final String SLASH_STRING = "/";
+    private static final String HTTP_STRING = "http";
+    private static final String HTTPS_STRING = "https";
+    private static final String COLON_SPLITTER = ":";
+    private static final String ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 
     private final SecureRandom random = new SecureRandom();
     private final HttpServer httpServer;
@@ -43,14 +50,14 @@ public class MyUrlShortenerService implements UrlShortenerService {
 
     private void handleUsers(HttpExchange exchange) throws IOException {
         String method = exchange.getRequestMethod();
-        if (!("POST".equals(method))) {
+        if (!(POST_METHOD.equals(method))) {
             exchange.sendResponseHeaders(405, -1);
             exchange.close();
             return;
         }
 
         String reqBody = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
-        String[] reqSplit = reqBody.split(":", 2);
+        String[] reqSplit = reqBody.split(COLON_SPLITTER, 2);
         String username = reqSplit[0];
         String password = reqSplit[1];
 
@@ -63,9 +70,8 @@ public class MyUrlShortenerService implements UrlShortenerService {
     private String generateRandomID(int length) {
         StringBuilder sb = new StringBuilder(length);
         for (int i = 0; i < length; i++) {
-            String alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-            int index = random.nextInt(alphabet.length());
-            sb.append(alphabet.charAt(index));
+            int index = random.nextInt(ALPHABET.length());
+            sb.append(ALPHABET.charAt(index));
         }
         return sb.toString();
     }
@@ -132,7 +138,7 @@ public class MyUrlShortenerService implements UrlShortenerService {
 
     private void handleGet(HttpExchange exchange) throws IOException {
         String reqPath = exchange.getRequestURI().getPath();
-        String id = reqPath.substring("/v0/links/".length());
+        String id = reqPath.substring(LINKS_PATH.length());
 
         if (!isValidID(id)) {
             exchange.sendResponseHeaders(422, -1);
@@ -156,7 +162,7 @@ public class MyUrlShortenerService implements UrlShortenerService {
 
     private void handlePut(HttpExchange exchange) throws IOException {
         String reqPath = exchange.getRequestURI().getPath();
-        String id = reqPath.substring("/v0/links/".length());
+        String id = reqPath.substring(LINKS_PATH.length());
         if (!isValidID(id)) {
             exchange.sendResponseHeaders(422, -1);
             exchange.close();
@@ -185,7 +191,7 @@ public class MyUrlShortenerService implements UrlShortenerService {
 
     private void handleDelete(HttpExchange exchange) throws IOException {
         String reqPath = exchange.getRequestURI().getPath();
-        String id = reqPath.substring("/v0/links/".length());
+        String id = reqPath.substring(LINKS_PATH.length());
 
         if (!isValidID(id)) {
             exchange.sendResponseHeaders(422, -1);
@@ -207,7 +213,7 @@ public class MyUrlShortenerService implements UrlShortenerService {
         }
 
         String reqPath = exchange.getRequestURI().getPath();
-        String id = reqPath.substring("/".length());
+        String id = reqPath.substring(SLASH_STRING.length());
         if (!isValidID(id)) {
             exchange.sendResponseHeaders(422, -1);
             exchange.close();
@@ -256,7 +262,7 @@ public class MyUrlShortenerService implements UrlShortenerService {
                 return false;
             }
 
-            return "http".equals(connectionType) || "https".equals(connectionType);
+            return HTTP_STRING.equals(connectionType) || HTTPS_STRING.equals(connectionType);
         } catch (IllegalArgumentException e) {
             return false;
         }
