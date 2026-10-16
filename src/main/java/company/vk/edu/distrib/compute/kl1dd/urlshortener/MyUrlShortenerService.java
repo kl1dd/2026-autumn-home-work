@@ -15,7 +15,7 @@ import java.util.NoSuchElementException;
 public class MyUrlShortenerService implements UrlShortenerService {
     private static final String GET_METHOD = "GET";
     private static final String POST_METHOD = "POST";
-    private static final String LINKS_PATH = "/v0/links";
+    private static final String LINKS_PATH = "/v0/links/";
     private static final String SLASH_STRING = "/";
     private static final String HTTP_STRING = "http";
     private static final String HTTPS_STRING = "https";
