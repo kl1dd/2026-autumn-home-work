@@ -26,7 +26,7 @@ public class AuthService {
             return false;
         }
         String auth = authHeaders.getFirst();
-        if (auth == null || !auth.startsWith(BASIC_PREFIX)) {
+        if (auth == null || !auth.regionMatches(true, 0, BASIC_PREFIX, 0, BASIC_PREFIX.length())) {
             return false;
         }
 

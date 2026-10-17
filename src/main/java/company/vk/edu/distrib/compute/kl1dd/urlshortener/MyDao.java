@@ -36,6 +36,6 @@ public class MyDao implements Dao<String> {
 
     @Override
     public void close() throws IOException {
-        // later
+        myHashMap.clear();
     }
 }
