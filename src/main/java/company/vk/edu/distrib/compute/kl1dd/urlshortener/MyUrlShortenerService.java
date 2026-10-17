@@ -13,6 +13,7 @@ import java.security.SecureRandom;
 import java.util.NoSuchElementException;
 
 public class MyUrlShortenerService implements UrlShortenerService {
+    private static final int STOP_DELAY_SECONDS = 2;
     private static final String GET_METHOD = "GET";
     private static final String POST_METHOD = "POST";
     private static final String LINKS_PATH = "/v0/links/";
@@ -58,6 +59,11 @@ public class MyUrlShortenerService implements UrlShortenerService {
 
         String reqBody = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
         String[] reqSplit = reqBody.split(COLON_SPLITTER, 2);
+        if (reqSplit.length != 2) {
+            exchange.sendResponseHeaders(400, -1);
+            exchange.close();
+            return;
+        }
         String username = reqSplit[0];
         String password = reqSplit[1];
 
@@ -277,6 +283,6 @@ public class MyUrlShortenerService implements UrlShortenerService {
     @Override
     public void stop() {
         startedOrStopped = true;
-        httpServer.stop(0);
+        httpServer.stop(STOP_DELAY_SECONDS);
     }
 }
