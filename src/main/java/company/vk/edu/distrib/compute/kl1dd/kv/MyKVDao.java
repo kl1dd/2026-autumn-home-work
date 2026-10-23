@@ -43,8 +43,6 @@ public class MyKVDao implements Dao<byte[]> {
             tempFile = Files.createTempFile(STORAGE_DIR, "kv-", ".tmp");
             Files.write(tempFile, value);
             Files.move(tempFile, filePath, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
-
-            tempFile = null;
         } finally {
             try {
                 if (tempFile != null) {
