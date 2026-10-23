@@ -5,37 +5,66 @@ import company.vk.edu.distrib.compute.Dao;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.NoSuchElementException;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class MyKVDao implements Dao<byte[]> {
-    private final Path storageDir;
+    private static final Path STORAGE_DIR = Path.of(System.getProperty("java.io.tmpdir"), "kl1dd-kv-storage");
+    private static final ReentrantReadWriteLock LOCK = new ReentrantReadWriteLock();
 
     public MyKVDao() throws IOException {
-        this.storageDir = Files.createTempDirectory("kv-storage");
-        Files.createDirectories(storageDir);
+        Files.createDirectories(STORAGE_DIR);
     }
 
     @Override
     public byte[] get(String key) throws NoSuchElementException, IllegalArgumentException, IOException {
-        Path filePath = storageDir.resolve(key);
+        LOCK.readLock().lock();
+        try {
+            Path filePath = STORAGE_DIR.resolve(key);
 
-        if (!Files.exists(filePath)) {
-            throw new NoSuchElementException();
+            if (!Files.exists(filePath)) {
+                throw new NoSuchElementException();
+            }
+
+            return Files.readAllBytes(filePath);
+        } finally {
+            LOCK.readLock().unlock();
         }
-
-        return Files.readAllBytes(filePath);
     }
 
     @Override
     public void upsert(String key, byte[] value) throws IllegalArgumentException, IOException {
-        Path filePath = storageDir.resolve(key);
-        Files.write(filePath, value);
+        LOCK.writeLock().lock();
+        Path tempFile = null;
+        try {
+            Path filePath = STORAGE_DIR.resolve(key);
+
+            tempFile = Files.createTempFile(STORAGE_DIR, "kv-", ".tmp");
+            Files.write(tempFile, value);
+            Files.move(tempFile, filePath, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+
+            tempFile = null;
+        } finally {
+            try {
+                if (tempFile != null) {
+                    Files.deleteIfExists(tempFile);
+                }
+            } finally {
+                LOCK.writeLock().unlock();
+            }
+        }
     }
 
     @Override
     public void delete(String key) throws IllegalArgumentException, IOException {
-        Path filePath = storageDir.resolve(key);
-        Files.deleteIfExists(filePath);
+        LOCK.writeLock().lock();
+        try {
+            Path filePath = STORAGE_DIR.resolve(key);
+            Files.deleteIfExists(filePath);
+        } finally {
+            LOCK.writeLock().unlock();
+        }
     }
 
     @Override
