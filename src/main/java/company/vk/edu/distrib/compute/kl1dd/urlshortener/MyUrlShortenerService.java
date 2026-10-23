@@ -31,7 +31,6 @@ public class MyUrlShortenerService implements UrlShortenerService {
     private final AuthService authService;
     private boolean startedOrStopped;
 
-
     public MyUrlShortenerService(HttpServer httpServer) {
         this.httpServer = httpServer;
         this.linksDao = new MyDao();
