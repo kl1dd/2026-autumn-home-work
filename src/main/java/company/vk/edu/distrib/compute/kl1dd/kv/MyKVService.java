@@ -9,6 +9,9 @@ import java.util.NoSuchElementException;
 
 public class MyKVService implements KVService {
     private static final String GET_METHOD = "GET";
+    private static final String ID_QUERY_PREFIX = "id=";
+    private static final int STOP_DELAY_SECONDS = 2;
+    private static final int MAX_REQUEST_BODY_SIZE = 5 * 1024 * 1024;
 
     private final HttpServer httpServer;
     private final MyKVDao dao;
@@ -80,7 +83,12 @@ public class MyKVService implements KVService {
 
         byte[] value;
         try {
-            value = exchange.getRequestBody().readAllBytes();
+            value = exchange.getRequestBody().readNBytes(MAX_REQUEST_BODY_SIZE + 1);
+            if (value.length > MAX_REQUEST_BODY_SIZE) {
+                exchange.sendResponseHeaders(413, -1);
+                exchange.close();
+                return;
+            }
         } catch (IOException e) {
             exchange.sendResponseHeaders(503, -1);
             exchange.close();
@@ -126,11 +134,11 @@ public class MyKVService implements KVService {
         if (query == null) {
             return null;
         }
-        if (!query.startsWith("id=")) {
+        if (!query.startsWith(ID_QUERY_PREFIX)) {
             return null;
         }
 
-        String id = query.substring("id=".length());
+        String id = query.substring(ID_QUERY_PREFIX.length());
         if (id.isEmpty()) {
             return null;
         }
@@ -145,6 +153,6 @@ public class MyKVService implements KVService {
 
     @Override
     public void stop() {
-        httpServer.stop(0);
+        httpServer.stop(STOP_DELAY_SECONDS);
     }
 }

@@ -15,6 +15,10 @@ public class MyRemoteDao implements Dao<String> {
     private static final int HTTP_ACCEPTED = 202;
     private static final int HTTP_NOT_FOUND = 404;
 
+    private static final String LOCALHOST_URL = "http://localhost:";
+    private static final String ENTITY_PATH = "/v0/entity?id=";
+    private static final String UNEXPECTED_STATUS_CODE = "Unexpected status code: ";
+
     private final int port;
     private final HttpClient httpClient;
 
@@ -25,7 +29,7 @@ public class MyRemoteDao implements Dao<String> {
 
     @Override
     public String get(String key) throws NoSuchElementException, IllegalArgumentException, IOException {
-        URI uri = URI.create("http://localhost:" + port + "/v0/entity?id=" + key);
+        URI uri = URI.create(LOCALHOST_URL + port + ENTITY_PATH + key);
         HttpRequest request = HttpRequest.newBuilder(uri).GET().build();
 
         HttpResponse<String> response;
@@ -41,7 +45,7 @@ public class MyRemoteDao implements Dao<String> {
                 throw new NoSuchElementException();
             }
 
-            throw new IOException("Unexpected status code: " + statusCode);
+            throw new IOException(UNEXPECTED_STATUS_CODE + statusCode);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new IOException(e);
@@ -50,7 +54,7 @@ public class MyRemoteDao implements Dao<String> {
 
     @Override
     public void upsert(String key, String value) throws IllegalArgumentException, IOException {
-        URI uri = URI.create("http://localhost:" + port + "/v0/entity?id=" + key);
+        URI uri = URI.create(LOCALHOST_URL + port + ENTITY_PATH + key);
         HttpRequest request = HttpRequest.newBuilder(uri).PUT(HttpRequest.BodyPublishers.ofString(value)).build();
 
         HttpResponse<String> response;
@@ -61,7 +65,7 @@ public class MyRemoteDao implements Dao<String> {
                 return;
             }
 
-            throw new IOException("Unexpected status code: " + statusCode);
+            throw new IOException(UNEXPECTED_STATUS_CODE + statusCode);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new IOException(e);
@@ -70,7 +74,7 @@ public class MyRemoteDao implements Dao<String> {
 
     @Override
     public void delete(String key) throws IllegalArgumentException, IOException {
-        URI uri = URI.create("http://localhost:" + port + "/v0/entity?id=" + key);
+        URI uri = URI.create(LOCALHOST_URL + port + ENTITY_PATH + key);
         HttpRequest request = HttpRequest.newBuilder(uri).DELETE().build();
 
         HttpResponse<String> response;
@@ -81,7 +85,7 @@ public class MyRemoteDao implements Dao<String> {
                 return;
             }
 
-            throw new IOException("Unexpected status code: " + statusCode);
+            throw new IOException(UNEXPECTED_STATUS_CODE + statusCode);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new IOException(e);
