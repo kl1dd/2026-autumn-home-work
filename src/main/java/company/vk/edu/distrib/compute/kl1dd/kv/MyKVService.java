@@ -152,6 +152,7 @@ public class MyKVService implements KVService {
         }
 
         int ack = getAck(exchange);
+        boolean ackSpecified = (getQueryParameter(exchange, "ack") != null);
         if (ack == -1) {
             exchange.sendResponseHeaders(400, -1);
             exchange.close();
@@ -175,11 +176,14 @@ public class MyKVService implements KVService {
         }
 
         boolean flag = waitForAck(futures, successCount, ack);
-        if (flag) {
-            exchange.sendResponseHeaders(200, -1);
+        if (!flag) {
+            exchange.sendResponseHeaders(HTTP_UNAVAILABLE, -1);
+        } else if (ackSpecified) {
+            exchange.sendResponseHeaders(HTTP_OK, -1);
         } else {
-            exchange.sendResponseHeaders(503, -1);
+            exchange.sendResponseHeaders(HTTP_ACCEPTED, -1);
         }
+
         exchange.close();
     }
 
@@ -199,7 +203,6 @@ public class MyKVService implements KVService {
         URI uri = URI.create(LOCALHOST_URL + port + ENTITY_PATH + id);
         HttpRequest request = HttpRequest.newBuilder(uri).header(INTERNAL_REQUEST_HEADER, INTERNAL_REQUEST_VALUE)
                 .DELETE().build();
-
 
         return httpClient.sendAsync(request, HttpResponse.BodyHandlers.discarding())
                 .thenApply(response -> response.statusCode() == HTTP_ACCEPTED)
@@ -289,7 +292,7 @@ public class MyKVService implements KVService {
     }
 
     // GET
-    private static class GetReplicaResult {
+    private static final class GetReplicaResult {
         private final int statusCode;
         private final byte[] value;
 
@@ -303,7 +306,7 @@ public class MyKVService implements KVService {
         }
 
         public byte[] getValue() {
-            return value;
+            return value.clone();
         }
     }
 
@@ -483,7 +486,6 @@ public class MyKVService implements KVService {
         }
         return ackInt;
     }
-
 
     @Override
     public void start() {
