@@ -5,9 +5,6 @@ import com.sun.net.httpserver.HttpServer;
 import company.vk.edu.distrib.compute.kv.KVService;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
 
 public class MyKVService implements KVService {
     private static final String GET_METHOD = "GET";
@@ -17,15 +14,11 @@ public class MyKVService implements KVService {
     private static final String INTERNAL_REQUEST_HEADER = "Internal-Request";
     private static final String INTERNAL_REQUEST_VALUE = "true";
 
-    private static final int HTTP_OK = 200;
-    private static final int HTTP_ACCEPTED = 202;
-    private static final int HTTP_NOT_FOUND = 404;
-    private static final int HTTP_UNAVAILABLE = 503;
-
     private final HttpServer httpServer;
     private final DaoHelper daoHelper;
     private final ReplicationImpl replication = new ReplicationImpl();
     private final ReplicationClient replicationClient = new ReplicationClient();
+    private final EntityHandler entityHandler;
 
     private int[] getClusterPorts() {
         String cluster = System.getProperty(CLUSTER_PROPERTY);
@@ -66,6 +59,8 @@ public class MyKVService implements KVService {
     public MyKVService(HttpServer httpServer) throws IOException {
         this.httpServer = httpServer;
         this.daoHelper = new DaoHelper(httpServer.getAddress().getPort());
+        this.entityHandler = new EntityHandler(daoHelper, replication, replicationClient,
+                                               httpServer.getAddress().getPort());
 
         httpServer.createContext("/v0/status", this::handleStatus);
         httpServer.createContext("/v0/entity", this::handleEntity);
@@ -111,7 +106,7 @@ public class MyKVService implements KVService {
         }
 
         if (isInternalRequest(exchange)) {
-            handleLocalDelete(exchange, id);
+            entityHandler.handleLocalDelete(exchange, id);
             return;
         }
 
@@ -123,43 +118,8 @@ public class MyKVService implements KVService {
             return;
         }
 
-        int successCount = 0;
-        int currentPort = httpServer.getAddress().getPort();
-        List<CompletableFuture<Boolean>> futures = new ArrayList<>();
-        for (int port : getClusterPorts()) {
-            if (port == currentPort) {
-                if (daoHelper.delete(id)) {
-                    successCount++;
-                }
-            } else {
-                futures.add(replicationClient.deleteFromReplica(port, id));
-            }
-        }
-
-        boolean flag = replication.waitForAck(futures, successCount, ack);
-        exchange.sendResponseHeaders(responseStatusDelete(flag, ackSpecified), -1);
-        exchange.close();
-    }
-
-    private int responseStatusDelete(boolean flag, boolean ackSpecified) {
-        if (flag) {
-            if (ackSpecified) {
-                return HTTP_OK;
-            }
-            return HTTP_ACCEPTED;
-        }
-
-        return HTTP_UNAVAILABLE;
-    }
-
-    private void handleLocalDelete(HttpExchange exchange, String id) throws IOException {
-        if (daoHelper.delete(id)) {
-            exchange.sendResponseHeaders(202, -1);
-            exchange.close();
-        } else {
-            exchange.sendResponseHeaders(503, -1);
-            exchange.close();
-        }
+        //handledelete
+        entityHandler.handleDelete(exchange, id, ack, ackSpecified, getClusterPorts());
     }
 
     // PUT
@@ -186,7 +146,7 @@ public class MyKVService implements KVService {
         }
 
         if (isInternalRequest(exchange)) {
-            handleLocalPut(exchange, id, value);
+            entityHandler.handleLocalPut(exchange, id, value);
             return;
         }
 
@@ -197,36 +157,7 @@ public class MyKVService implements KVService {
             return;
         }
 
-        int successCount = 0;
-        int currentPort = httpServer.getAddress().getPort();
-        List<CompletableFuture<Boolean>> futures = new ArrayList<>();
-        for (int port : getClusterPorts()) {
-            if (port == currentPort) {
-                if (daoHelper.upsert(id, value)) {
-                    successCount++;
-                }
-            } else {
-                futures.add(replicationClient.putToReplica(port, id, value));
-            }
-        }
-
-        boolean flag = replication.waitForAck(futures, successCount, ack);
-        if (flag) {
-            exchange.sendResponseHeaders(201, -1);
-        } else {
-            exchange.sendResponseHeaders(503, -1);
-        }
-        exchange.close();
-    }
-
-    private void handleLocalPut(HttpExchange exchange, String id, byte[] value) throws IOException {
-        if (daoHelper.upsert(id, value)) {
-            exchange.sendResponseHeaders(201, -1);
-            exchange.close();
-        } else {
-            exchange.sendResponseHeaders(503, -1);
-            exchange.close();
-        }
+        entityHandler.handlePut(exchange, id, value, ack, getClusterPorts());
     }
 
     // GET
@@ -239,7 +170,7 @@ public class MyKVService implements KVService {
         }
 
         if (isInternalRequest(exchange)) {
-            handleLocalGet(exchange, id);
+            entityHandler.handleLocalGet(exchange, id);
             return;
         }
 
@@ -250,47 +181,7 @@ public class MyKVService implements KVService {
             return;
         }
 
-        ReplicationImpl.GetReplicaResult localResult = daoHelper.getResult(id);
-        int currentPort = httpServer.getAddress().getPort();
-        List<CompletableFuture<ReplicationImpl.GetReplicaResult>> futures = new ArrayList<>();
-        for (int port : getClusterPorts()) {
-            if (port != currentPort) {
-                futures.add(replicationClient.getFromReplica(port, id));
-            }
-        }
-
-        ReplicationImpl.GetReplicaResult result = replication.waitForGetAck(futures, localResult, ack);
-        int resultStatusCode = result.getStatusCode();
-        if (resultStatusCode == HTTP_OK) {
-            byte[] resultValue = result.getValue();
-            exchange.sendResponseHeaders(HTTP_OK, resultValue.length);
-            exchange.getResponseBody().write(resultValue);
-            exchange.close();
-        } else if (resultStatusCode == HTTP_NOT_FOUND) {
-            exchange.sendResponseHeaders(404, -1);
-            exchange.close();
-        } else {
-            exchange.sendResponseHeaders(503, -1);
-            exchange.close();
-        }
-    }
-
-    private void handleLocalGet(HttpExchange exchange, String id) throws IOException {
-        ReplicationImpl.GetReplicaResult result = daoHelper.getResult(id);
-        int resultStatusCode = result.getStatusCode();
-        if (resultStatusCode == 200) {
-            byte[] resultValue = result.getValue();
-
-            exchange.sendResponseHeaders(200, resultValue.length);
-            exchange.getResponseBody().write(resultValue);
-            exchange.close();
-        } else if (resultStatusCode == 404) {
-            exchange.sendResponseHeaders(404, -1);
-            exchange.close();
-        } else if (resultStatusCode == 503) {
-            exchange.sendResponseHeaders(503, -1);
-            exchange.close();
-        }
+        entityHandler.handleGet(exchange, id, ack, getClusterPorts());
     }
 
     private String getId(HttpExchange exchange) {
