@@ -30,10 +30,10 @@ public class ReplicationImpl {
     }
 
     private static byte[] copyValue(byte[] value) {
-        if (value != null) {
-            return value.clone();
+        if (value == null) {
+            return new byte[0];
         }
-        return null;
+        return value.clone();
     }
 
     boolean waitForAck(List<CompletableFuture<Boolean>> futures, int initialSuccess, int ack) {
