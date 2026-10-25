@@ -16,11 +16,8 @@ public class ReplicationImpl {
 
         GetReplicaResult(int statusCode, byte[] value) {
             this.statusCode = statusCode;
-            if (value == null) {
-                this.value = null;
-            } else {
-                this.value = value.clone();
-            }
+
+            this.value = copyValue(value);
         }
 
         public int getStatusCode() {
@@ -28,8 +25,15 @@ public class ReplicationImpl {
         }
 
         public byte[] getValue() {
+            return copyValue(value);
+        }
+    }
+
+    private static byte[] copyValue(byte[] value) {
+        if (value != null) {
             return value.clone();
         }
+        return null;
     }
 
     boolean waitForAck(List<CompletableFuture<Boolean>> futures, int initialSuccess, int ack) {

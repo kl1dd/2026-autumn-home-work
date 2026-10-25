@@ -15,7 +15,6 @@ public class MyKVService implements KVService {
     private static final String INTERNAL_REQUEST_VALUE = "true";
 
     private final HttpServer httpServer;
-    private final DaoHelper daoHelper;
     private final ReplicationImpl replication = new ReplicationImpl();
     private final ReplicationClient replicationClient = new ReplicationClient();
     private final EntityHandler entityHandler;
@@ -58,7 +57,7 @@ public class MyKVService implements KVService {
 
     public MyKVService(HttpServer httpServer) throws IOException {
         this.httpServer = httpServer;
-        this.daoHelper = new DaoHelper(httpServer.getAddress().getPort());
+        DaoHelper daoHelper = new DaoHelper(httpServer.getAddress().getPort());
         this.entityHandler = new EntityHandler(daoHelper, replication, replicationClient,
                                                httpServer.getAddress().getPort());
 

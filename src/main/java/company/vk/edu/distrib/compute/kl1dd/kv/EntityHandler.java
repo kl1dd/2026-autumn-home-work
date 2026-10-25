@@ -149,16 +149,16 @@ public class EntityHandler {
     void handleLocalGet(HttpExchange exchange, String id) throws IOException {
         ReplicationImpl.GetReplicaResult result = daoHelper.getResult(id);
         int resultStatusCode = result.getStatusCode();
-        if (resultStatusCode == 200) {
+        if (resultStatusCode == HTTP_OK) {
             byte[] resultValue = result.getValue();
 
             exchange.sendResponseHeaders(200, resultValue.length);
             exchange.getResponseBody().write(resultValue);
             exchange.close();
-        } else if (resultStatusCode == 404) {
+        } else if (resultStatusCode == HTTP_NOT_FOUND) {
             exchange.sendResponseHeaders(404, -1);
             exchange.close();
-        } else if (resultStatusCode == 503) {
+        } else if (resultStatusCode == HTTP_UNAVAILABLE) {
             exchange.sendResponseHeaders(503, -1);
             exchange.close();
         }
