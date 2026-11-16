@@ -117,7 +117,6 @@ public class MyKVService implements KVService {
             return;
         }
 
-        //handledelete
         entityHandler.handleDelete(exchange, id, ack, ackSpecified, getClusterPorts());
     }
 
