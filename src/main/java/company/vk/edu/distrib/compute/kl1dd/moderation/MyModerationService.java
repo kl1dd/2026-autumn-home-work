@@ -21,6 +21,7 @@ import java.time.Instant;
 import java.util.Base64;
 import java.util.List;
 import java.util.Properties;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class MyModerationService implements ModerationService {
     private static final String LINKS_MODERATED_TOPIC = "links.moderated";
@@ -30,14 +31,12 @@ public class MyModerationService implements ModerationService {
     private final String bootstrapServers;
     private final List<String> bannedWords;
     private KafkaConsumer<String, String> kafkaConsumer;
-    private volatile boolean running;
+    private final AtomicBoolean running = new AtomicBoolean();
     private KafkaProducer<String, String> kafkaProducer;
-
 
     public MyModerationService(String bootstrapServers) throws IOException {
         this.bootstrapServers = bootstrapServers;
         this.bannedWords = loadBannedWords();
-
     }
 
     private Properties createConsumerProperties() {
@@ -61,43 +60,47 @@ public class MyModerationService implements ModerationService {
     }
 
     private void runConsumerLoop() {
-        try {
-            while (running) {
-                var records = kafkaConsumer.poll(Duration.ofMillis(200));
+        try (KafkaConsumer<String, String> consumer = kafkaConsumer) {
+            while (running.get()) {
+                var records = consumer.poll(Duration.ofMillis(200));
                 for (ConsumerRecord<String, String> record : records) {
-                    try {
-                        LinkCreatedEvent event = deserializeLink(record.value());
-
-                        boolean passed = !isBanned(event.url());
-
-                        ModerationResultEvent result = new ModerationResultEvent(event.id(), passed,
-                                                                                 passed ? "" : "banned word",
-                                                                                 Instant.now());
-
-                        String value = serializeResult(result);
-                        ProducerRecord<String, String> recordRes = new ProducerRecord<>(LINKS_MODERATED_TOPIC, result.id(), value);
-                        kafkaProducer.send(recordRes);
-                    } catch (RuntimeException e) {
-                        ProducerRecord<String, String> deadLetter = new ProducerRecord<>(LINKS_CREATED_DLT_TOPIC,
-                                                                                         record.key(),
-                                                                                         record.value());
-
-                        String errorMessage = e.getMessage();
-                        if (errorMessage == null || errorMessage.isEmpty()) {
-                            errorMessage = e.getClass().getSimpleName();
-                        }
-                        deadLetter.headers().add(ERROR_HEADER, errorMessage.getBytes(StandardCharsets.UTF_8));
-
-                        kafkaProducer.send(deadLetter);
-                    }
+                    processRecord(record);
                 }
             }
         } catch (WakeupException e) {
-            if (running) {
+            if (running.get()) {
                 throw e;
             }
-        } finally {
-            kafkaConsumer.close();
+        }
+    }
+
+    private void processRecord(ConsumerRecord<String, String> record) {
+        try {
+            LinkCreatedEvent event = deserializeLink(record.value());
+
+            boolean passed = !isBanned(event.url());
+
+            ModerationResultEvent result = new ModerationResultEvent(event.id(), passed,
+                    passed ? "" : "banned word",
+                    Instant.now());
+
+            String value = serializeResult(result);
+            ProducerRecord<String, String> recordRes = new ProducerRecord<>(LINKS_MODERATED_TOPIC,
+                    result.id(),
+                    value);
+            kafkaProducer.send(recordRes);
+        } catch (RuntimeException e) {
+            ProducerRecord<String, String> deadLetter = new ProducerRecord<>(LINKS_CREATED_DLT_TOPIC,
+                    record.key(),
+                    record.value());
+
+            String errorMessage = e.getMessage();
+            if (errorMessage == null || errorMessage.isEmpty()) {
+                errorMessage = e.getClass().getSimpleName();
+            }
+            deadLetter.headers().add(ERROR_HEADER, errorMessage.getBytes(StandardCharsets.UTF_8));
+
+            kafkaProducer.send(deadLetter);
         }
     }
 
@@ -144,13 +147,13 @@ public class MyModerationService implements ModerationService {
 
         kafkaProducer = new KafkaProducer<>(createProducerProperties());
 
-        running = true;
+        running.set(true);
         new Thread(this::runConsumerLoop).start();
     }
 
     @Override
     public void stop() {
-        running = false;
+        running.set(false);
 
         if (kafkaConsumer != null) {
             kafkaConsumer.wakeup();

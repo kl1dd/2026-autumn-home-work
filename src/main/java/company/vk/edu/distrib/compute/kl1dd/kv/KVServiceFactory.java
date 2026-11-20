@@ -6,7 +6,6 @@ import company.vk.edu.distrib.compute.kv.KVService;
 import company.vk.edu.distrib.compute.kv.KVServiceTest;
 import company.vk.edu.distrib.compute.kv.ReplicatedKVServiceTest;
 
-
 import java.io.IOException;
 import java.net.InetSocketAddress;
 
