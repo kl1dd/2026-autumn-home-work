@@ -6,6 +6,7 @@ import company.vk.edu.distrib.compute.Dao;
 import company.vk.edu.distrib.compute.urlshortener.UrlShortenerService;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.util.NoSuchElementException;
 
@@ -248,7 +249,7 @@ public class MyUrlShortenerService implements UrlShortenerService {
                                                                 try {
                                                                     linksDao.delete(id);
                                                                 } catch (IOException e) {
-                                                                    throw new RuntimeException(e);
+                                                                    throw new UncheckedIOException(e);
                                                                 }
                                                             }
             );

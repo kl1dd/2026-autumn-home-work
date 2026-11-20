@@ -20,6 +20,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.List;
+import java.util.Locale;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -116,9 +117,9 @@ public class MyModerationService implements ModerationService {
     }
 
     private boolean isBanned(String url) {
-        String decodedUrl = URLDecoder.decode(url, StandardCharsets.UTF_8).toLowerCase();
+        String decodedUrl = URLDecoder.decode(url, StandardCharsets.UTF_8).toLowerCase(Locale.ROOT);
         for (String bannedWord : bannedWords) {
-            if (decodedUrl.contains(bannedWord.toLowerCase())) {
+            if (decodedUrl.contains(bannedWord.toLowerCase(Locale.ROOT))) {
                 return true;
             }
         }
